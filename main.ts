@@ -15,22 +15,18 @@ export default class MyPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
-		try {
-			this.bus = dbus.sessionBus();
-			this.proxy = await this.bus.getProxyObject('org.gnome.Hamster', '/org/gnome/Hamster');
-			this.hamster = await this.proxy.getInterface('org.gnome.Hamster')
-		} catch (error) {
-			console.log("Hamster is not running or not reachable");
-		}
+		await this.hamsterConnect();	
 
 		this.addCommand({
 			id: 'start-hamster-timer',
 			name: 'Start Hamster timer',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				if (!this.hamster) {
-					new Notice("Hamster is not running or not reachable");
-					return;
+					this.hamsterConnect();
+					if (!this.hamster) {
+						new Notice("Hamster is not running or not reachable");
+						return;
+					}
 				}
 				let cursor = editor.getCursor();
 				let line = editor.getLine(cursor.line);
@@ -44,8 +40,11 @@ export default class MyPlugin extends Plugin {
 			name: 'Stop Hamster timer',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				if (!this.hamster) {
-					new Notice("Hamster is not running or not reachable");
-					return;
+					this.hamsterConnect();
+					if (!this.hamster) {
+						new Notice("Hamster is not running or not reachable");
+						return;
+					}
 				}
 				this.hamster.StopTracking(0)
 			}
@@ -74,6 +73,16 @@ export default class MyPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	async hamsterConnect() {
+		try {
+			this.bus = dbus.sessionBus();
+			this.proxy = await this.bus.getProxyObject('org.gnome.Hamster', '/org/gnome/Hamster');
+			this.hamster = await this.proxy.getInterface('org.gnome.Hamster')
+		} catch (error) {
+			console.log("Hamster is not running or not reachable");
+		}
 	}
 
 	sanitize(line: string) {
