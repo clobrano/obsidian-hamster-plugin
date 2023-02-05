@@ -30,6 +30,10 @@ export default class MyPlugin extends Plugin {
 				}
 				let cursor = editor.getCursor();
 				let line = editor.getLine(cursor.line);
+				if (!this.isTask(line)) {
+					new Notice("This is not an actionable item");
+					return;
+				}
 				let task = this.sanitize(line);
 				this.hamster.AddFact(task, 0, 0, false);
 			}
@@ -87,6 +91,10 @@ export default class MyPlugin extends Plugin {
 
 	sanitize(line: string) {
 		return line.replace('- [ ] ', '').trim()
+	}
+
+	isTask(line: string) {
+		return line.startsWith('- [ ]');
 	}
 }
 
