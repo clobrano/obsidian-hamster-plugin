@@ -25,7 +25,8 @@ export default class MyPlugin extends Plugin {
 			name: 'Start Hamster timer',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				let cursor = editor.getCursor()
-				let task = editor.getLine(cursor.line);
+				let line = editor.getLine(cursor.line);
+				let task = this.sanitize(line)
 				this.hamster.AddFact(task, 0, 0, false)
 			}
 		});
@@ -80,6 +81,10 @@ export default class MyPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+
+	sanitize(line: string) {
+		return line.replace('- [ ] ', '').trim()
 	}
 }
 
