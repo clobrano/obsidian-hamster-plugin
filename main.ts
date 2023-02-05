@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-
+import * as dbus from 'dbus-next'
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
@@ -16,6 +16,10 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		this.bus = dbus.sessionBus();
+		this.proxy = await this.bus.getProxyObject('org.gnome.Hamster', '/org/gnome/Hamster');
+		this.hamster = await this.proxy.getInterface('org.gnome.Hamster')
+
 		// This creates an icon in the left ribbon.
 		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
@@ -30,10 +34,11 @@ export default class MyPlugin extends Plugin {
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
+			id: 'start-hamster-timer',
+			name: 'Start dummy task',
 			callback: () => {
-				new SampleModal(this.app).open();
+				//new SampleModal(this.app).open();
+				this.hamster.AddFact('dummy task', 0, 0, false)
 			}
 		});
 		// This adds an editor command that can perform some operation on the current editor instance
