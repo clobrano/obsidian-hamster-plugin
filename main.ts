@@ -30,6 +30,13 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 		
+		this.addCommand({
+			id: 'stop-hamster-timer',
+			name: 'Stop Hamster timer',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.hamster.StopTracking(0)
+			}
+		});
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
 		this.addCommand({
 			id: 'open-sample-modal-complex',
