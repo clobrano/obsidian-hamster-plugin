@@ -87,7 +87,12 @@ export default class ObsidianForHamster extends Plugin {
 	}
 
 	sanitize(line: string) {
-		return line.replace('- [ ] ', '').trim()
+		line = line.replaceAll('- [ ] ', '')
+		line = line.replaceAll('[[#', '')
+		line = line.replaceAll('[[', '')
+		line = line.replaceAll(']]', '')
+		line = line.replaceAll('`', '')
+		return line.trim()
 	}
 
 	isTask(line: string) {
