@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, parseYaml } from 'obsidian';
 import * as dbus from 'dbus-next'
 // Remember to rename these classes and interfaces!
 
@@ -95,6 +95,25 @@ export default class ObsidianForHamster extends Plugin {
 
 	isTask(line: string) {
 		return line.startsWith('- [ ]');
+	}
+
+	async getFrontmatterMetadata(file: TFile) {
+		let metadata = {}
+		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter
+		if (!frontmatter) {
+			return metadata
+		}
+		const {position: {start, end}} = frontmatter;
+		const filecontent = await this.app.vault.cachedRead(file);
+
+		const yamlContent: string = filecontent.split("\n").slice(start.line, end.line).join("\n")
+		const parsedYaml = parseYaml(yamlContent);
+
+		for (const key in parsedYaml) {
+			console.log(key + ": " + parsedYaml[key])
+			metadata[key] = parsedYaml[key]
+		}
+		return metadata
 	}
 }
 
