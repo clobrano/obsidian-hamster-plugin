@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, parseYaml } from 'obsidian';
 import * as dbus from 'dbus-next'
 // Remember to rename these classes and interfaces!
 
@@ -20,7 +20,7 @@ export default class ObsidianForHamster extends Plugin {
 		this.addCommand({
 			id: 'start-hamster-timer',
 			name: 'Start Hamster timer',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				if (!this.hamster) {
 					this.hamsterConnect();
 					if (!this.hamster) {
@@ -28,13 +28,12 @@ export default class ObsidianForHamster extends Plugin {
 						return;
 					}
 				}
-				let cursor = editor.getCursor();
-				let line = editor.getLine(cursor.line);
-				if (!this.isTask(line)) {
-					new Notice("This is not an actionable item");
-					return;
-				}
-				let task = this.sanitize(line);
+				let file = app.workspace.getActiveFile();
+				let metadata = await this.getFrontmatterMetadata(file);
+				let line = this.getCurrentLine(editor);
+				let task = this.composeTask(line, metadata);
+				if (!task)
+					return
 				this.hamster.AddFact(task, 0, 0, false);
 			}
 		});
@@ -95,6 +94,80 @@ export default class ObsidianForHamster extends Plugin {
 
 	isTask(line: string) {
 		return line.startsWith('- [ ]');
+	}
+
+	async getFrontmatterMetadata(file: TFile) {
+		let metadata = {}
+		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter
+		if (!frontmatter) {
+			return metadata
+		}
+		const {position: {start, end}} = frontmatter;
+		const filecontent = await this.app.vault.cachedRead(file);
+
+		const yamlContent: string = filecontent.split("\n").slice(start.line, end.line).join("\n")
+		const parsedYaml = parseYaml(yamlContent);
+
+		for (const key in parsedYaml) {
+			metadata[key] = parsedYaml[key]
+		}
+		return metadata
+	}
+
+	getCurrentLine(editor: Editor) {
+		let cursor = editor.getCursor();
+		return editor.getLine(cursor.line);
+	}
+
+	composeTask(line: string, metadata) {
+		if (!this.isTask(line)) {
+			new Notice("This is not an actionable item");
+			return null;
+		}
+
+		let task = this.sanitize(line);
+
+		if (!task.includes("@") && metadata["project"]) {
+			let project = metadata["project"]
+			if (task.includes(",,")) {
+				// project goes before ",,"
+				const parts = task.split(",,")
+				task = parts[0] + "@" + project + ",," + parts[1]
+			} else {
+				task += "@" + project;
+			}
+		}
+
+		if (metadata["tags"]) {
+			let tags = this.getTagsFromMetadata(metadata)
+			console.log(tags);
+			if (!task.includes(",,")) {
+				task += ",,"
+			}
+			task += tags;
+		}
+		console.log(task)
+		return task;
+	}
+
+	getTagsFromMetadata(metadata) {
+		let tags = ""
+
+		if (!metadata["tags"]) {
+			return tags;
+		}
+		let parts = []
+		if (Array.isArray(metadata["tags"])) {
+			parts = metadata["tags"];
+		} else {
+			parts = metadata["tags"].split(",")
+		}
+		
+		for(const i in parts) {
+			tags += " #" + parts[i].trim() + ",";
+		}
+		
+		return tags;
 	}
 }
 
