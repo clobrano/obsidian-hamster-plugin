@@ -15,18 +15,16 @@ export default class ObsidianForHamster extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		await this.hamsterConnect();	
+		await this.hamsterConnect();
 
 		this.addCommand({
 			id: 'start-hamster-timer',
 			name: 'Start Hamster timer',
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				this.hamsterConnect();
 				if (!this.hamster) {
-					this.hamsterConnect();
-					if (!this.hamster) {
-						new Notice("Hamster is not running or not reachable");
-						return;
-					}
+					new Notice("Hamster is not running or not reachable");
+					return;
 				}
 				let file = app.workspace.getActiveFile();
 				let metadata = await this.getFrontmatterMetadata(file);
@@ -37,17 +35,15 @@ export default class ObsidianForHamster extends Plugin {
 				this.hamster.AddFact(task, 0, 0, false);
 			}
 		});
-		
+
 		this.addCommand({
 			id: 'stop-hamster-timer',
 			name: 'Stop Hamster timer',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
+				this.hamsterConnect();
 				if (!this.hamster) {
-					this.hamsterConnect();
-					if (!this.hamster) {
-						new Notice("Hamster is not running or not reachable");
-						return;
-					}
+					new Notice("Hamster is not running or not reachable");
+					return;
 				}
 				this.hamster.StopTracking(0)
 			}
@@ -79,12 +75,14 @@ export default class ObsidianForHamster extends Plugin {
 	}
 
 	async hamsterConnect() {
-		try {
-			this.bus = dbus.sessionBus();
-			this.proxy = await this.bus.getProxyObject('org.gnome.Hamster', '/org/gnome/Hamster');
-			this.hamster = await this.proxy.getInterface('org.gnome.Hamster')
-		} catch (error) {
-			console.log("Hamster is not running or not reachable");
+		if (!this.hamster) {
+			try {
+				this.bus = dbus.sessionBus();
+				this.proxy = await this.bus.getProxyObject('org.gnome.Hamster', '/org/gnome/Hamster');
+				this.hamster = await this.proxy.getInterface('org.gnome.Hamster')
+			} catch (error) {
+				console.log("Hamster is not running or not reachable");
+			}
 		}
 	}
 
@@ -162,11 +160,11 @@ export default class ObsidianForHamster extends Plugin {
 		} else {
 			parts = metadata["tags"].split(",")
 		}
-		
+
 		for(const i in parts) {
 			tags += " #" + parts[i].trim() + ",";
 		}
-		
+
 		return tags;
 	}
 }
