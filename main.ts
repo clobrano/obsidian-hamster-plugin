@@ -16,10 +16,30 @@ export default class ObsidianForHamster extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		await this.hamsterConnect();
+		this.addCommand({
+			id: 'start-hamster-timer-file',
+			name: 'Start Hamster timer for current file',
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				this.hamsterConnect();
+				if (!this.hamster) {
+					new Notice("Hamster is not running or not reachable");
+					return;
+				}
+				let file = app.workspace.getActiveFile();
+				let filename = file.name.replace(".md", "")
+				console.log("file name is", filename)
+				let metadata = await this.getFrontmatterMetadata(file);
+				let task = this.composeTask(filename, metadata);
+				console.log("task is", task)
+				if (!task)
+					return
+				this.hamster.AddFact(task, 0, 0, false);
+			}
+		});
 
 		this.addCommand({
-			id: 'start-hamster-timer',
-			name: 'Start Hamster timer',
+			id: 'start-hamster-timer-line',
+			name: 'Start Hamster timer for current line',
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				this.hamsterConnect();
 				if (!this.hamster) {
@@ -95,10 +115,6 @@ export default class ObsidianForHamster extends Plugin {
 		return line.trim()
 	}
 
-	isTask(line: string) {
-		return line.startsWith('- [ ]');
-	}
-
 	async getFrontmatterMetadata(file: TFile) {
 		let metadata = {}
 		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter
@@ -123,11 +139,6 @@ export default class ObsidianForHamster extends Plugin {
 	}
 
 	composeTask(line: string, metadata) {
-		if (!this.isTask(line)) {
-			new Notice("This is not an actionable item");
-			return null;
-		}
-
 		let task = this.sanitize(line);
 
 		if (!task.includes("@") && metadata["project"]) {
@@ -149,7 +160,7 @@ export default class ObsidianForHamster extends Plugin {
 			}
 			task += tags;
 		}
-		console.log(task)
+		console.log("composed task: ", task)
 		return task;
 	}
 
